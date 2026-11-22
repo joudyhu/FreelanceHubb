@@ -1,0 +1,135 @@
+Project freelancehub {
+  database_type: 'PostgreSQL'
+  Note: 'FreelanceHub logical relational model'
+}
+
+Enum UserRole { CLIENT FREELANCER ADMIN }
+Enum UserStatus { ACTIVE SUSPENDED }
+Enum ProjectStatus { OPEN IN_PROGRESS COMPLETED CANCELLED }
+Enum OfferStatus { PENDING ACCEPTED REJECTED WITHDRAWN }
+Enum LedgerType { TOP_UP ESCROW_HOLD ESCROW_RELEASE PLATFORM_FEE REFUND ADJUSTMENT }
+Enum DeliveryStatus { SUBMITTED APPROVED REVISION_REQUESTED }
+
+Table users {
+  id int [pk, increment]
+  name varchar(100) [not null]
+  email varchar(255) [not null, unique]
+  password_hash varchar [not null]
+  role UserRole [not null, default: 'CLIENT']
+  status UserStatus [not null, default: 'ACTIVE']
+  bio varchar(1000)
+  avatar_url varchar
+  hourly_rate decimal(12,2)
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table sessions {
+  id uuid [pk]
+  user_id int [not null, ref: > users.id]
+  refresh_token_hash varchar [not null]
+  user_agent varchar
+  ip_address varchar
+  expires_at timestamp
+  revoked_at timestamp
+  created_at timestamp
+}
+
+Table categories {
+  id int [pk, increment]
+  name varchar(80) [not null, unique]
+  slug varchar(100) [not null, unique]
+  description varchar(500)
+  is_active boolean
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table projects {
+  id int [pk, increment]
+  client_id int [not null, ref: > users.id]
+  category_id int [not null, ref: > categories.id]
+  title varchar(160) [not null]
+  description text [not null]
+  budget decimal(12,2) [not null]
+  attachment_url varchar
+  status ProjectStatus
+  created_at timestamp
+  updated_at timestamp
+  indexes {
+    (status, created_at)
+    (category_id, status)
+    (client_id, status)
+    budget
+  }
+}
+
+Table offers {
+  id int [pk, increment]
+  project_id int [not null, ref: > projects.id]
+  freelancer_id int [not null, ref: > users.id]
+  price decimal(12,2) [not null]
+  duration_days int [not null]
+  message varchar(1000) [not null]
+  status OfferStatus
+  accepted_for_project_id int [unique, ref: > projects.id]
+  created_at timestamp
+  updated_at timestamp
+  indexes {
+    (project_id, freelancer_id) [unique]
+    (project_id, status)
+    (freelancer_id, status)
+  }
+}
+
+Table wallets {
+  id int [pk, increment]
+  user_id int [not null, unique, ref: > users.id]
+  balance decimal(14,2)
+  escrow decimal(14,2)
+  currency char(3)
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table ledger_entries {
+  id int [pk, increment]
+  wallet_id int [not null, ref: > wallets.id]
+  type LedgerType
+  amount decimal(14,2)
+  balance_after decimal(14,2)
+  escrow_after decimal(14,2)
+  reference varchar(120)
+  description varchar(500)
+  created_at timestamp
+  indexes {
+    (wallet_id, created_at)
+    (type, created_at)
+  }
+}
+
+Table deliveries {
+  id int [pk, increment]
+  project_id int [not null, ref: > projects.id]
+  offer_id int [not null, ref: > offers.id]
+  freelancer_id int [not null, ref: > users.id]
+  file_url varchar [not null]
+  note varchar(1000)
+  status DeliveryStatus
+  created_at timestamp
+  reviewed_at timestamp
+}
+
+Table notifications {
+  id int [pk, increment]
+  user_id int [not null, ref: > users.id]
+  title varchar(160)
+  body varchar(1000)
+  data json
+  read_at timestamp
+  created_at timestamp
+  indexes {
+    (user_id, created_at)
+    (user_id, read_at)
+  }
+}
