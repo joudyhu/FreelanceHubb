@@ -218,3 +218,5 @@ Before pushing, verify that `.env` is ignored and only `.env.example` is tracked
 ## License
 
 Educational project. Add a license if you intend to distribute or reuse it publicly.
+#   F r e e l a n c e H u b  
+ 
